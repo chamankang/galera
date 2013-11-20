@@ -23,5 +23,5 @@ member.save
 
 node.default["openstack"]["db"]["bind_interface"] = iface
 
-#include_recipe "ktc-openstack-ha::mysql"
+include_recipe "ktc-openstack-ha::mysql"
 include_recipe "galera::server"
