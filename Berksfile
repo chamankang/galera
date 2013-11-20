@@ -8,6 +8,8 @@ site :opscode
 
 metadata
 
-cookbook 'ktc-etcd'
-cookbook 'ktc-galera', path: 'test/integration/cookbooks/ktc-galera'
-cookbook 'ktc-testing'
+group "integration" do
+  cookbook "etcd"
+  cookbook "galera-test", path: "test/integration/cookbooks/galera-test"
+  cookbook "ktc-testing"
+end
