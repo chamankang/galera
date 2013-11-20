@@ -1,6 +1,9 @@
 ---
 driver_plugin: vagrant
 provisioner: chef_zero
+driver_config:
+  customize:
+    memory: 512
 
 platforms:
 - name: centos-6.4_chef-11.4.4
@@ -16,8 +19,8 @@ suites:
 - name: default
   run_list:
     - recipe[ktc-testing]
-    - recipe[ktc-etcd]
-    - recipe[ktc-galera]
+    - recipe[etcd::compile_time]
+    - recipe[galera-test]
   attributes:
     etcd:
       args: '-c 127.0.0.1:4001 -s 127.0.0.1:7001 -f'
@@ -31,7 +34,6 @@ suites:
         buffer_pool_size: 128M
     openstack:
       developer_mode: true
-
-clusters:
-  default:
-    - default
+    vips:
+      tags:
+        mysql: 10.0.2.50

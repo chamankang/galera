@@ -11,4 +11,5 @@ end
 
 depends "galera"
 depends "ktc-utils"
+depends "ktc-openstack-ha"
 depends "services"
