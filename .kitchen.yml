@@ -31,3 +31,6 @@ suites:
         buffer_pool_size: 128M
     openstack:
       developer_mode: true
+    vips:
+      tags:
+        mysql: 10.0.2.50
