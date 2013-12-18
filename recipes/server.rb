@@ -224,7 +224,7 @@ end
 service "mysql" do
   supports :restart => true, :start => true, :stop => true
   service_name node['mysql']['servicename']
-  action :nothing
+  action :enable
 end
 
 execute "galera-installed" do
