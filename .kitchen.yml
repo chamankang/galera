@@ -1,19 +1,16 @@
 ---
-driver_plugin: vagrant
-provisioner: chef_zero
-driver_config:
+provisioner:
+  name: chef_zero
+  require_chef_omnibus: latest
+
+driver:
+  name: vagrant
   customize:
     memory: 512
 
 platforms:
-- name: centos-6.4_chef-11.4.4
-  driver_config:
-    box: opscode-centos-6.4_chef-11.4.4
-    box_url:  https://opscode-vm.s3.amazonaws.com/vagrant/opscode_centos-6.4_chef-11.4.4.box
-- name: ubuntu-12.04_chef-11.4.4
-  driver_config:
-    box: opscode-ubuntu-12.04_chef-11.4.4
-    box_url: https://opscode-vm.s3.amazonaws.com/vagrant/opscode_ubuntu-12.04_chef-11.4.4.box
+  - name: centos-6.4
+  - name: ubuntu-12.04
 
 suites:
 - name: default
