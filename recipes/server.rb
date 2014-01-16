@@ -99,7 +99,7 @@ else
   bash "install-galera" do
     user "root"
     code <<-EOH
-      apt-get -y --force-yes install #{node['xtra']['packages']}
+      apt-get -y --force-yes install -o Dpkg::Options::="--force-confold" #{node['xtra']['packages']}
       dpkg -i #{Chef::Config[:file_cache_path]}/#{galera_package}
       apt-get -f install
     EOH
