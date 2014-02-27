@@ -4,6 +4,8 @@
 #
 # rubocop:disable LineLength
 
+include_recipe 'ktc-package'
+
 install_flag = '/root/.galera_installed'
 
 group 'mysql' do
@@ -16,39 +18,17 @@ user 'mysql' do
   shell '/bin/false'
 end
 
-galera_config = node['galera']
-config_name = 'mysql_wsrep_tarball_' + node['kernel']['machine']
-mysql_tarball = galera_config[config_name]
+remote_file "#{Chef::Config[:file_cache_path]}/#{node['galera']['mysql_tgz']}" do
+  source "#{node['galera']['uri']}/#{node['galera']['mysql_tgz']}"
+  action :create_if_missing
+end
+
 # strip .tar.gz
-mysql_package = mysql_tarball[0..-8]
-
-mysql_wsrep_source = galera_config['mysql_wsrep_source']
-galera_source = galera_config['galera_source']
-
-Chef::Log.info "Downloading #{mysql_tarball}"
-remote_file "#{Chef::Config[:file_cache_path]}/#{mysql_tarball}" do
-  source "#{mysql_wsrep_source}/" + mysql_tarball
-  action :create_if_missing
-end
-
-package_name = 'galera_package_' + node['kernel']['machine']
-case node['platform']
-when 'centos', 'redhat', 'fedora', 'suse', 'scientific', 'amazon'
-  galera_package = galera_config[package_name]['rpm']
-else
-  galera_package = galera_config[package_name]['deb']
-end
-
-Chef::Log.info "Downloading #{galera_package}"
-remote_file "#{Chef::Config[:file_cache_path]}/#{galera_package}" do
-  source "#{galera_source}/" + galera_package
-  action :create_if_missing
-end
-
+mysql_package = node['galera']['mysql_tgz'][0..-8]
 bash 'install-mysql-package' do
   user 'root'
   code <<-EOH
-    zcat #{Chef::Config[:file_cache_path]}/#{mysql_tarball} | tar xf - -C #{node['mysql']['install_dir']}
+    zcat #{Chef::Config[:file_cache_path]}/#{node['galera']['mysql_tgz']} | tar xf - -C #{node['mysql']['install_dir']}
     ln -sf #{node['mysql']['install_dir']}/#{mysql_package} #{node['mysql']['base_dir']}
   EOH
   not_if { File.directory?("#{node['mysql']['install_dir']}/#{mysql_package}") }
@@ -92,7 +72,7 @@ when 'centos', 'redhat', 'fedora', 'suse', 'scientific', 'amazon'
     user 'root'
     code <<-EOH
       yum -y localinstall #{node['xtra']['packages']}
-      yum -y localinstall #{Chef::Config[:file_cache_path]}/#{galera_package}
+      yum -y install galera
     EOH
     not_if { FileTest.exists?(node['wsrep']['provider']) }
   end
@@ -101,7 +81,7 @@ else
     user 'root'
     code <<-EOH
       apt-get -y --force-yes install -o Dpkg::Options::="--force-confold" #{node['xtra']['packages']}
-      dpkg -i #{Chef::Config[:file_cache_path]}/#{galera_package}
+      apt-get -y --force-yes install -o Dpkg::Options::="--force-confold" galera
       apt-get -f install
     EOH
     not_if { FileTest.exists?(node['wsrep']['provider']) }
@@ -204,7 +184,7 @@ bash 'set-wsrep-grants-mysqldump' do
     #{node['galera']['mysql_bin']} -uroot -h127.0.0.1 -e "SET wsrep_on=0; GRANT ALL ON *.* TO '#{node['wsrep']['user']}'@'127.0.0.1' IDENTIFIED BY '#{node['wsrep']['password']}'"
   EOH
   only_if do
-    init_host && (galera_config['sst_method'] == 'mysqldump') &&
+    init_host && (node['galera']['sst_method'] == 'mysqldump') &&
       !FileTest.exists?(install_flag)
   end
 end
@@ -216,7 +196,7 @@ bash 'secure-mysql' do
     #{node['galera']['mysql_bin']} -uroot -h127.0.0.1 -e "UPDATE mysql.user SET Password=PASSWORD('#{node['mysql']['server_root_password']}') WHERE User='root'; DELETE FROM mysql.user WHERE User=''; DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1'); GRANT ALL ON *.* TO 'root'@'%' IDENTIFIED BY '#{node['mysql']['server_root_password']}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
   EOH
   only_if do
-    init_host && (galera_config['secure'] == 'yes') &&
+    init_host && (node['galera']['secure'] == 'yes') &&
       !FileTest.exists?(install_flag)
   end
 end

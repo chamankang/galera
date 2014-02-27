@@ -10,4 +10,5 @@ version '0.5.5'
   supports os
 end
 
+depends 'ktc-package'
 depends 'services'
