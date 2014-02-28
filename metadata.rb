@@ -4,7 +4,7 @@ maintainer_email  'wil.reichert@kt.com'
 license           'All rights reserved'
 description       'Installs/Configures Openstack Identity Service'
 long_description  IO.read(File.join(File.dirname(__FILE__), 'README.md'))
-version '0.5.4'
+version '0.5.5'
 
 %w{ debian ubuntu centos fedora redhat }.each do |os|
   supports os
