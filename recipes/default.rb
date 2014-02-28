@@ -17,4 +17,4 @@
 # limitations under the License.
 #
 
-include_recipe "galera::server"
+include_recipe 'galera::server'
