@@ -5,6 +5,7 @@
 # rubocop:disable LineLength
 
 include_recipe 'ktc-package'
+include_recipe 'ktc-utils'
 
 install_flag = '/root/.galera_installed'
 
@@ -133,18 +134,19 @@ end
 
 init_host = false
 mysql_service = Services::Service.new 'mysql'
-hosts = mysql_service.members.map { |m| m.name }
+hosts = mysql_service.members.map { |m| m.ip }
 
 wsrep_cluster_address = ''
 
+ip = KTC::Network.address 'management'
 # Assume that this mysql host has already been registered by ktc-database cook.
-if hosts.length == 1 && hosts.first == node['fqdn']
+if hosts.length == 1 && hosts.sort.first == ip
   Chef::Log.info("I've got the galera init position.")
   init_host = true
   wsrep_cluster_address = 'gcomm://'
 else
   hosts.each do |h|
-    if h != node['fqdn']
+    unless h.eql? ip
       wsrep_cluster_address += "gcomm://#{h}:#{node['wsrep']['port']},"
     end
   end
