@@ -47,7 +47,7 @@ when 'centos', 'redhat', 'fedora', 'suse', 'scientific', 'amazon'
       rm -rf /etc/my.cnf /etc/mysql
       rm -f /root/#{install_flag}
     EOH
-    only_if { !FileTest.exists?(install_flag) }
+    not_if { FileTest.exists?(install_flag) }
   end
 else
   bash 'purge-mysql-galera' do
@@ -63,7 +63,7 @@ else
       [ $? -eq 0 ] && rm -rf #{node['mysql']['conf_dir']}/*
       rm -f /root/#{install_flag}
     EOH
-    only_if { !FileTest.exists?(install_flag) }
+    not_if { FileTest.exists?(install_flag) }
   end
 end
 
