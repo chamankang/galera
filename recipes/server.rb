@@ -7,7 +7,7 @@
 include_recipe 'ktc-package'
 include_recipe 'ktc-utils'
 
-install_flag = '/root/.galera_installed'
+install_flag = node['galera']['install_flag']
 
 group 'mysql' do
 end
@@ -89,28 +89,18 @@ else
   end
 end
 
-directory node['mysql']['conf_dir'] do
-  owner 'mysql'
-  group 'mysql'
-  mode '0755'
-  action :create
-  recursive true
-end
-
-directory node['mysql']['data_dir'] do
-  owner 'mysql'
-  group 'mysql'
-  mode '0755'
-  action :create
-  recursive true
-end
-
-directory node['mysql']['run_dir'] do
-  owner 'mysql'
-  group 'mysql'
-  mode '0755'
-  action :create
-  recursive true
+[
+  node['mysql']['conf_dir'],
+  node['mysql']['data_dir'],
+  node['mysql']['run_dir']
+].each do |d|
+  directory d do
+    owner 'mysql'
+    group 'mysql'
+    mode '0755'
+    action :create
+    recursive true
+  end
 end
 
 # install db to the data directory
@@ -132,7 +122,6 @@ execute 'setup-init.d-mysql-service' do
   not_if { FileTest.exists?(install_flag) }
 end
 
-init_host = false
 mysql_service = Services::Service.new 'mysql'
 hosts = mysql_service.members.map { |m| m.ip }
 
@@ -142,7 +131,8 @@ ip = KTC::Network.address 'management'
 # Assume that this mysql host has already been registered by ktc-database cook.
 if hosts.length == 1 && hosts.sort.first == ip
   Chef::Log.info("I've got the galera init position.")
-  init_host = true
+  node.run_state['galera'] ||= {}
+  node.run_state['galera']['init_host'] = true
   wsrep_cluster_address = 'gcomm://'
 else
   hosts.each do |h|
@@ -163,54 +153,10 @@ template 'my.cnf' do
   notifies :restart, 'service[mysql]', :immediately
 end
 
-bash 'wait-until-synced' do
-  user 'root'
-  code <<-EOH
-    state=0
-    cnt=0
-    until [[ "$state" == "4" || "$cnt" > 5 ]]
-    do
-      state=$(#{node['galera']['mysql_bin']} -uroot -h127.0.0.1 -e "SET wsrep_on=0; SHOW GLOBAL STATUS LIKE 'wsrep_local_state'")
-      state=$(echo "$state"  | tr '\n' ' ' | awk '{print $4}')
-      cnt=$(($cnt + 1))
-      sleep 1
-    done
-  EOH
-  only_if { init_host && !FileTest.exists?(install_flag) }
-end
-
-bash 'set-wsrep-grants-mysqldump' do
-  user 'root'
-  code <<-EOH
-    #{node['galera']['mysql_bin']} -uroot -h127.0.0.1 -e "GRANT ALL ON *.* TO '#{node['wsrep']['user']}'@'%' IDENTIFIED BY '#{node['wsrep']['password']}'"
-    #{node['galera']['mysql_bin']} -uroot -h127.0.0.1 -e "SET wsrep_on=0; GRANT ALL ON *.* TO '#{node['wsrep']['user']}'@'127.0.0.1' IDENTIFIED BY '#{node['wsrep']['password']}'"
-  EOH
-  only_if do
-    init_host && (node['galera']['sst_method'] == 'mysqldump') &&
-      !FileTest.exists?(install_flag)
-  end
-end
-
-bash 'secure-mysql' do
-  user 'root'
-  code <<-EOH
-    #{node['galera']['mysql_bin']} -uroot -h127.0.0.1 -e "DROP DATABASE IF EXISTS test; DELETE FROM mysql.db WHERE DB='test' OR DB='test\\_%'"
-    #{node['galera']['mysql_bin']} -uroot -h127.0.0.1 -e "UPDATE mysql.user SET Password=PASSWORD('#{node['mysql']['server_root_password']}') WHERE User='root'; DELETE FROM mysql.user WHERE User=''; DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1'); GRANT ALL ON *.* TO 'root'@'%' IDENTIFIED BY '#{node['mysql']['server_root_password']}' WITH GRANT OPTION; FLUSH PRIVILEGES;"
-  EOH
-  only_if do
-    init_host && (node['galera']['secure'] == 'yes') &&
-      !FileTest.exists?(install_flag)
-  end
-end
+include_recipe 'galera::first_run' unless FileTest.exists?(install_flag)
 
 service 'mysql' do
   supports restart: true, start: true, stop: true
   service_name node['mysql']['servicename']
   action :enable
-end
-
-execute 'galera-installed' do
-  command "touch #{install_flag}"
-  action :run
-  not_if { FileTest.exists?(install_flag) }
 end
