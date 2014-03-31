@@ -1,4 +1,5 @@
 # borrowed from https://gist.github.com/2050259
+# rubocop:disable FileName
 
 provide 'ipaddress'
 require_plugin "#{os}::network"
