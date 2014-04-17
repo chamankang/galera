@@ -11,4 +11,5 @@ version '0.5.9'
 end
 
 depends 'ktc-package'
+depends 'ktc-utils'
 depends 'services'
