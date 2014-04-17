@@ -149,7 +149,10 @@ template 'my.cnf' do
   owner 'mysql'
   group 'mysql'
   mode '0644'
-  variables wsrep_urls: wsrep_cluster_address
+  variables(
+    wsrep_urls: wsrep_cluster_address,
+    management_ip: ip
+  )
   notifies :restart, 'service[mysql]', :immediately
 end
 
